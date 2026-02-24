@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.idea/
+.vscode/
+.DS_Store
+.env
+*.csv
+*.parquet
+catboost_info/
+oauth2.json
+baseball-prospectus/
+milb-rosters/
