@@ -34,7 +34,7 @@ print(f"  {len(features)} total player-seasons")
 # For each player, pair season N features with season N+1 outcomes.
 print("\nStep 1: Building year-over-year pairs...")
 
-target_cols = ['ip', 'wins', 'k', 'era', 'whip', 'k_bb', 'quality_starts', 'sv_hld']
+target_cols = ['ip', 'wins', 'k', 'bb', 'era', 'whip', 'quality_starts', 'sv_hld']
 
 current = features.copy()
 future = features[['player_id', 'season'] + target_cols].copy()
@@ -163,6 +163,15 @@ for target in target_cols:
     print(f"  {target:>15s}: MAE = {mae:.3f}, R² = {best_r2:.3f}  "
           f"(blend: {best_blend:.0%} XGB, {1-best_blend:.0%} Ridge, {len(keep)} features)")
 
+# Evaluate derived K/BB (from predicted K and BB components)
+pred_k = optimized['k']['predictions']
+pred_bb = optimized['bb']['predictions']
+derived_k_bb = pred_k / np.where(pred_bb == 0, 1, pred_bb)
+actual_k_bb = test['next_k'].fillna(0).values / np.where(test['next_bb'].fillna(0).values == 0, 1, test['next_bb'].fillna(0).values)
+k_bb_r2 = r2_score(actual_k_bb, derived_k_bb)
+k_bb_mae = mean_absolute_error(actual_k_bb, derived_k_bb)
+print(f"  {'k_bb (derived)':>15s}: MAE = {k_bb_mae:.3f}, R² = {k_bb_r2:.3f}  (from K and BB components)")
+
 # ── Step 6: Spot check predictions vs actuals ────────────
 # Compare projections to actual 2025 stats for known players.
 print(f"\nStep 6: Spot checking predictions...")
@@ -173,6 +182,10 @@ test_results = test[['player_id', 'season']].copy()
 for target in target_cols:
     test_results[f'pred_{target}'] = optimized[target]['predictions']
     test_results[f'actual_{target}'] = optimized[target]['actuals']
+
+# Derive K/BB from components for spot check
+test_results['pred_k_bb'] = (test_results['pred_k'] / test_results['pred_bb'].replace(0, 1)).round(2)
+test_results['actual_k_bb'] = (test_results['actual_k'] / test_results['actual_bb'].replace(0, 1)).round(2)
 
 test_results = test_results.merge(bio, on='player_id', how='left')
 
@@ -259,11 +272,14 @@ for target in target_cols:
 projections['ip'] = projections['ip'].round(1)
 projections['wins'] = projections['wins'].round(0).astype(int)
 projections['k'] = projections['k'].round(0).astype(int)
+projections['bb'] = projections['bb'].round(0).astype(int)
 projections['era'] = projections['era'].round(2)
 projections['whip'] = projections['whip'].round(2)
-projections['k_bb'] = projections['k_bb'].round(2)
 projections['quality_starts'] = projections['quality_starts'].round(0).astype(int)
 projections['sv_hld'] = projections['sv_hld'].round(0).astype(int)
+
+# Derive K/BB from component predictions
+projections['k_bb'] = (projections['k'] / projections['bb'].replace(0, 1)).round(2)
 
 # Add player names
 projections = projections.merge(bio, on='player_id', how='left')

@@ -53,7 +53,7 @@ An end-to-end data pipeline that ingests raw pitch-level data from MLB's Statcas
 │  └─ 2026 team context via 40-man roster swap                        │
 │                                                                     │
 │  Hitters: PA, AVG, OPS, R, HR, RBI, SB, TB                         │
-│  Pitchers: IP, W, K, ERA, WHIP, K/BB, QS, SV+H                    │
+│  Pitchers: IP, W, K, BB, ERA, WHIP, QS, SV+H (K/BB derived)       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -167,11 +167,14 @@ Each stat gets its own model pipeline:
 | IP | 29.4 | 0.456 | 55% XGB / 45% Ridge |
 | W | 2.4 | 0.347 | 55% XGB / 45% Ridge |
 | K | 28.1 | 0.453 | 55% XGB / 45% Ridge |
+| BB | 9.9 | 0.326 | 70% XGB / 30% Ridge |
 | ERA | 1.28 | 0.113 | 100% XGB |
 | WHIP | 0.19 | 0.123 | 60% XGB / 40% Ridge |
-| K/BB | 0.85 | 0.189 | 40% XGB / 60% Ridge |
 | QS | 2.2 | 0.565 | 90% XGB / 10% Ridge |
 | SV+H | 4.6 | 0.536 | 100% XGB |
+| K/BB | 0.81 | 0.189 | Derived from K ÷ BB |
+
+K/BB is derived from the independently predicted K and BB components rather than predicted directly — ratios are inherently noisy (small BB errors get amplified in the denominator), and predicting the components separately produces more stable projections.
 
 The model automatically discovers that Ridge dominates rate stats (AVG, OPS, ERA, WHIP) while XGBoost dominates counting stats (HR, RBI, K, SB) — consistent with the sabermetric understanding that rate stats regress heavily while counting stats depend on non-linear playing-time interactions.
 
@@ -235,16 +238,16 @@ mlb-projections/
 
 | Player | Team | IP | W | K | ERA | WHIP | K/BB | QS |
 |---|---|---|---|---|---|---|---|---|
-| Tarik Skubal | DET | 151.2 | 12 | 193 | 3.01 | 0.99 | 5.88 | 16 |
-| Zack Wheeler | PHI | 148.1 | 11 | 170 | 3.11 | 1.07 | 4.43 | 15 |
-| Garrett Crochet | BOS | 151.4 | 10 | 186 | 3.22 | 1.07 | 4.67 | 16 |
-| Hunter Brown | HOU | 152.2 | 11 | 169 | 3.29 | 1.17 | 3.59 | 15 |
-| Paul Skenes | PIT | 149.3 | 11 | 174 | 3.39 | 1.15 | 4.33 | 12 |
-| Yoshinobu Yamamoto | LAD | 149.0 | 10 | 164 | 3.55 | 1.17 | 3.77 | 14 |
-| Cristopher Sánchez | PHI | 155.2 | 10 | 163 | 3.55 | 1.18 | 3.84 | 15 |
-| Chris Sale | ATL | 151.9 | 10 | 181 | 3.57 | 1.12 | 4.34 | 13 |
-| Dylan Cease | TOR | 140.5 | 9 | 160 | 3.59 | 1.22 | 3.47 | 11 |
-| Sonny Gray | BOS | 143.0 | 9 | 148 | 3.75 | 1.19 | 4.27 | 12 |
+| Tarik Skubal | DET | 151.2 | 12 | 193 | 3.01 | 0.99 | 4.82 | 16 |
+| Zack Wheeler | PHI | 148.1 | 11 | 170 | 3.11 | 1.07 | 4.25 | 15 |
+| Garrett Crochet | BOS | 151.4 | 10 | 186 | 3.22 | 1.07 | 4.77 | 16 |
+| Hunter Brown | HOU | 152.2 | 11 | 169 | 3.29 | 1.17 | 3.31 | 15 |
+| Paul Skenes | PIT | 149.3 | 11 | 174 | 3.39 | 1.15 | 4.05 | 12 |
+| Yoshinobu Yamamoto | LAD | 149.0 | 10 | 164 | 3.55 | 1.17 | 3.42 | 14 |
+| Cristopher Sánchez | PHI | 155.2 | 10 | 163 | 3.55 | 1.18 | 4.08 | 15 |
+| Chris Sale | ATL | 151.9 | 10 | 181 | 3.57 | 1.12 | 4.64 | 13 |
+| Dylan Cease | TOR | 140.5 | 9 | 160 | 3.59 | 1.22 | 3.14 | 11 |
+| Sonny Gray | BOS | 143.0 | 9 | 148 | 3.75 | 1.19 | 4.35 | 12 |
 
 ## Setup
 
